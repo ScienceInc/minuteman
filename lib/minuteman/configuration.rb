@@ -9,11 +9,9 @@ module Minuteman
       @parallel = false
 
       @patterns = {
-        year:   -> (time) { time.strftime("%Y") },
-        month:  -> (time) { time.strftime("%Y-%m") },
-        day:    -> (time) { time.strftime("%Y-%m-%d") },
-        hour:   -> (time) { time.strftime("%Y-%m-%d %H") },
-        minute: -> (time) { time.strftime("%Y-%m-%d %H:%m") },
+        year:  ->(time) { time.strftime("%Y") },
+        month: ->(time) { time.strftime("%Y-%m") },
+        day:   ->(time) { time.strftime("%Y-%m-%d") }
       }
     end
 

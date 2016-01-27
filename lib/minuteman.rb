@@ -25,11 +25,19 @@ module Minuteman
       @_time_spans = patterns.keys
     end
 
-    def events
-      config.redis.call("SMEMBERS", "#{Minuteman.prefix}::Events")
+    def time
+      Time.now.in_time_zone("Pacific Time (US & Canada)")
     end
 
-    def track(action, users = nil, time = Time.now.utc)
+    def events(filter = "")
+      config.redis.call("SMEMBERS", "#{Minuteman.prefix}::Events").select{|e| e.match(/^#{filter}/)}
+    end
+
+    def attributions
+      config.redis.call("SMEMBERS", "#{Minuteman.prefix}::Attributions")
+    end
+
+    def track(action, users = nil, time = time)
       users = Minuteman::User.create if users.nil?
 
       Array(users).each do |user|
@@ -48,7 +56,18 @@ module Minuteman
       users
     end
 
-    def add(action, time = Time.now.utc, users = [])
+    def attribute(consultant, users = nil, add = true)
+      users = Minuteman::User.create if users.nil?
+      Array(users).each do |user|
+        attribution = Minuteman::Attribution.find_or_create(
+          consultant_id: consultant.id
+        )
+        attribution.update_consultant(user.id, add)
+      end
+      users
+    end
+
+    def add(action, time = time, users = [])
       time_spans.each do |time_span|
         process do
           counter = Minuteman::Counter.create({
@@ -79,6 +98,15 @@ module Minuteman
 
     def count(action)
       counters_cache[action]
+    end
+
+    def most_popular(event_prefix = "")
+      popular = {}
+      Minuteman.events(event_prefix).each do |event|
+        # TODO different time periods
+        popular[event.gsub(/^#{event_prefix}:/, "")] = Minuteman.count(event).month.count
+      end
+      return Hash[popular.sort_by{|k, v| v}.reverse]
     end
 
     private
@@ -118,6 +146,7 @@ end
 
 require 'minuteman/user'
 require 'minuteman/event'
+require 'minuteman/attribution'
 require 'minuteman/counter'
 require 'minuteman/result'
 require 'minuteman/analyzer'

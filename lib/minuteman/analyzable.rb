@@ -37,6 +37,14 @@ module Minuteman
       Minuteman.config.redis.call("GETBIT", key, user.id) == 1
     end
 
+    def included(ids)
+      included = []
+      Array(ids).each do |user_id|
+        included << user_id if Minuteman.config.redis.call("GETBIT", key, user_id) == 1
+      end
+      return included
+    end
+
     private
 
     def key_exists?(key)
